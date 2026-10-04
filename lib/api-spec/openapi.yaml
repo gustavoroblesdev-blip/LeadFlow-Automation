@@ -1,0 +1,525 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: LeadFlow Automation CRM, workflow simulation, and webhook API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: leads
+  - name: dashboard
+  - name: workflows
+  - name: automation
+  - name: appointments
+  - name: webhooks
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Read dashboard totals and recent activity
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /leads:
+    get:
+      operationId: listLeads
+      tags: [leads]
+      summary: List leads for the CRM table and pipeline
+      responses:
+        "200":
+          description: Leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lead"
+    post:
+      operationId: createLead
+      tags: [leads]
+      summary: Capture and automatically qualify a lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadInput"
+      responses:
+        "201":
+          description: Created and processed lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+        "400":
+          description: Invalid lead input
+  /leads/{leadId}:
+    get:
+      operationId: getLead
+      tags: [leads]
+      summary: Read lead details and automation history
+      parameters:
+        - $ref: "#/components/parameters/LeadId"
+      responses:
+        "200":
+          description: Lead detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadDetail"
+        "404":
+          description: Lead not found
+  /leads/{leadId}/stage:
+    patch:
+      operationId: updateLeadStage
+      tags: [leads]
+      summary: Move a lead to another sales pipeline stage
+      parameters:
+        - $ref: "#/components/parameters/LeadId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StageUpdate"
+      responses:
+        "200":
+          description: Updated lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+        "404":
+          description: Lead not found
+  /workflows:
+    get:
+      operationId: listWorkflows
+      tags: [workflows]
+      summary: List demo workflows and their run counts
+      responses:
+        "200":
+          description: Workflow definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workflow"
+  /automation-logs:
+    get:
+      operationId: listAutomationLogs
+      tags: [automation]
+      summary: List recent automation execution logs
+      responses:
+        "200":
+          description: Automation logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AutomationLog"
+  /integrations/status:
+    get:
+      operationId: getIntegrationStatus
+      tags: [automation]
+      summary: Report whether GoHighLevel is connected or running in demo mode
+      responses:
+        "200":
+          description: Integration mode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationStatus"
+  /demo/simulate-lead:
+    post:
+      operationId: simulateLead
+      tags: [automation]
+      summary: Create a sample lead and run its new-lead workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemoRequest"
+      responses:
+        "201":
+          description: Simulation timeline and created lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoRunResult"
+  /demo/run-complete:
+    post:
+      operationId: runCompleteDemo
+      tags: [automation]
+      summary: Run the complete lead-to-post-appointment scenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemoRequest"
+      responses:
+        "201":
+          description: Full scenario timeline and final lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoRunResult"
+  /leads/{leadId}/appointments:
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Schedule and confirm an appointment for a lead
+      parameters:
+        - $ref: "#/components/parameters/LeadId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentInput"
+      responses:
+        "201":
+          description: Appointment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "404":
+          description: Lead not found
+  /appointments/{appointmentId}/complete:
+    post:
+      operationId: completeAppointment
+      tags: [appointments]
+      summary: Mark an appointment complete and trigger post-appointment follow-up
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Completed appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "404":
+          description: Appointment not found
+  /webhooks/lead:
+    post:
+      operationId: receiveLeadWebhook
+      tags: [webhooks]
+      summary: Receive a lead submission from an external form or automation platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadInput"
+      responses:
+        "202":
+          description: Webhook accepted and lead processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResult"
+        "400":
+          description: Invalid webhook payload
+  /webhooks/appointment:
+    post:
+      operationId: receiveAppointmentWebhook
+      tags: [webhooks]
+      summary: Receive an appointment event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentWebhookInput"
+      responses:
+        "202":
+          description: Webhook accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResult"
+        "400":
+          description: Invalid webhook payload
+  /webhooks/status:
+    post:
+      operationId: receiveStatusWebhook
+      tags: [webhooks]
+      summary: Receive a pipeline status change
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusWebhookInput"
+      responses:
+        "202":
+          description: Webhook accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResult"
+        "400":
+          description: Invalid webhook payload
+  /webhooks/ghl:
+    post:
+      operationId: receiveGhlWebhook
+      tags: [webhooks]
+      summary: Receive a GoHighLevel webhook event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GhlWebhookInput"
+      responses:
+        "202":
+          description: Webhook accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResult"
+        "400":
+          description: Invalid webhook payload
+        "401":
+          description: Invalid webhook secret
+components:
+  parameters:
+    LeadId:
+      name: leadId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+    LeadStage:
+      type: string
+      enum: [Nuevo, Contactado, Calificado, Cita programada, Propuesta, Ganado, Perdido]
+    LeadPriority:
+      type: string
+      enum: [HOT, WARM, COLD]
+    Activity:
+      type: object
+      properties:
+        id: { type: string }
+        at: { type: string, format: date-time }
+        event: { type: string }
+        action: { type: string }
+        result: { type: string, enum: [SUCCESS, PENDING, FAILED] }
+        message: { type: string }
+      required: [id, at, event, action, result, message]
+    Lead:
+      type: object
+      properties:
+        id: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        company: { type: ["string", "null"] }
+        service: { type: string }
+        budget: { type: string }
+        preferredContactDate: { type: ["string", "null"], pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        message: { type: string }
+        urgent: { type: boolean }
+        score: { type: integer, minimum: 0, maximum: 100 }
+        priority: { $ref: "#/components/schemas/LeadPriority" }
+        stage: { $ref: "#/components/schemas/LeadStage" }
+        createdAt: { type: string, format: date-time }
+        lastActivity: { type: string, format: date-time }
+      required: [id, firstName, lastName, email, phone, company, service, budget, preferredContactDate, message, urgent, score, priority, stage, createdAt, lastActivity]
+    LeadDetail:
+      allOf:
+        - $ref: "#/components/schemas/Lead"
+        - type: object
+          properties:
+            activities:
+              type: array
+              items:
+                $ref: "#/components/schemas/Activity"
+            automations:
+              type: array
+              items:
+                $ref: "#/components/schemas/AutomationCheck"
+          required: [activities, automations]
+    LeadInput:
+      type: object
+      properties:
+        firstName: { type: string, minLength: 1, maxLength: 100 }
+        lastName: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 255 }
+        phone: { type: string, minLength: 5, maxLength: 40 }
+        company: { type: ["string", "null"], maxLength: 160 }
+        service: { type: string, minLength: 1, maxLength: 120 }
+        budget: { type: string, minLength: 1, maxLength: 80 }
+        preferredContactDate: { type: ["string", "null"], pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+        message: { type: string, maxLength: 2000 }
+        urgent: { type: boolean, default: false }
+      required: [firstName, lastName, email, phone, service, budget, message]
+    StageUpdate:
+      type: object
+      properties:
+        stage:
+          $ref: "#/components/schemas/LeadStage"
+      required: [stage]
+    AutomationCheck:
+      type: object
+      properties:
+        name: { type: string }
+        status: { type: string, enum: [complete, pending, skipped] }
+        detail: { type: string }
+      required: [name, status, detail]
+    DashboardSummary:
+      type: object
+      properties:
+        totalLeads: { type: integer }
+        newLeads: { type: integer }
+        qualifiedLeads: { type: integer }
+        appointments: { type: integer }
+        conversions: { type: integer }
+        conversionRate: { type: number }
+        hotLeads: { type: integer }
+        pipeline: { type: object, additionalProperties: { type: integer } }
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/Activity"
+      required: [totalLeads, newLeads, qualifiedLeads, appointments, conversions, conversionRate, hotLeads, pipeline, recentActivity]
+    Workflow:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        trigger: { type: string }
+        actions:
+          type: array
+          items: { type: string }
+        runs: { type: integer }
+        enabled: { type: boolean }
+      required: [id, name, trigger, actions, runs, enabled]
+    AutomationLog:
+      type: object
+      properties:
+        id: { type: string }
+        at: { type: string, format: date-time }
+        event: { type: string }
+        action: { type: string }
+        result: { type: string, enum: [SUCCESS, PENDING, FAILED] }
+        leadId: { type: ["string", "null"] }
+        leadName: { type: ["string", "null"] }
+        message: { type: string }
+      required: [id, at, event, action, result, leadId, leadName, message]
+    IntegrationStatus:
+      type: object
+      properties:
+        provider: { type: string }
+        mode: { type: string, enum: [demo, live] }
+        configured: { type: boolean }
+        message: { type: string }
+      required: [provider, mode, configured, message]
+    DemoRequest:
+      type: object
+      properties:
+        lead:
+          $ref: "#/components/schemas/LeadInput"
+    DemoStep:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        event: { type: string }
+        action: { type: string }
+        result: { type: string, enum: [SUCCESS, PENDING, FAILED] }
+        at: { type: string, format: date-time }
+      required: [id, label, event, action, result, at]
+    DemoRunResult:
+      type: object
+      properties:
+        lead:
+          $ref: "#/components/schemas/Lead"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/DemoStep"
+        scenario: { type: string }
+      required: [lead, steps, scenario]
+    AppointmentInput:
+      type: object
+      properties:
+        startsAt: { type: string, format: date-time }
+        title: { type: string, minLength: 1, maxLength: 160 }
+      required: [startsAt, title]
+    Appointment:
+      type: object
+      properties:
+        id: { type: string }
+        leadId: { type: string }
+        title: { type: string }
+        startsAt: { type: string, format: date-time }
+        status: { type: string, enum: [confirmed, completed] }
+      required: [id, leadId, title, startsAt, status]
+    AppointmentWebhookInput:
+      type: object
+      properties:
+        leadId: { type: string }
+        startsAt: { type: string, format: date-time }
+        status: { type: string, enum: [created, confirmed, completed] }
+      required: [leadId, startsAt, status]
+    StatusWebhookInput:
+      type: object
+      properties:
+        leadId: { type: string }
+        stage:
+          $ref: "#/components/schemas/LeadStage"
+      required: [leadId, stage]
+    GhlWebhookInput:
+      type: object
+      properties:
+        type: { type: string }
+        id: { type: ["string", "null"] }
+        data: { type: object, additionalProperties: true }
+      required: [type, data]
+    WebhookResult:
+      type: object
+      properties:
+        accepted: { type: boolean }
+        eventId: { type: string }
+        message: { type: string }
+        leadId: { type: ["string", "null"] }
+      required: [accepted, eventId, message, leadId]
+

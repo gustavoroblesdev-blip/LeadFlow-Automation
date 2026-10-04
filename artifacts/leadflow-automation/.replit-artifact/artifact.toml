@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "LeadFlow Automation"
+description = "A professional lead-capture and CRM demo for showcasing automated qualification, sales pipeline management, workflow simulations, and a GoHighLevel-ready integration layer."
+version = "1.0.0"
+id = "artifacts/leadflow-automation"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21501
+
+[services.development]
+run = "pnpm --filter @workspace/leadflow-automation run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/leadflow-automation", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/leadflow-automation/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21501"
+BASE_PATH = "/"
