@@ -137,28 +137,6 @@ Los endpoints usan el prefijo `/api`.
 
 Los endpoints de webhook validan su cuerpo. Si `WEBHOOK_SECRET` está configurado, también requieren el encabezado `x-webhook-secret`. En la demo sin secreto, los webhooks aceptan solicitudes para facilitar la prueba; no uses datos personales reales ni expongas el panel CRM como un sistema de producción sin añadir autenticación y limitar el acceso.
 
-## Ejecutar en Replit
-
-1. Usa los workflows **API Server** y **LeadFlow Automation** para iniciar el backend y la interfaz.
-2. La base de datos debe tener el esquema actualizado:
-
-   ```bash
-   pnpm --filter @workspace/db run push
-   ```
-
-3. Abre la vista previa del artefacto. El servidor inserta tres prospectos ficticios de demostración cuando la tabla está vacía.
-4. Para comprobar integridad de tipos:
-
-   ```bash
-   pnpm run typecheck
-   ```
-
-Para regenerar el cliente y validadores después de modificar el contrato:
-
-```bash
-pnpm --filter @workspace/api-spec run codegen
-```
-
 ## Demo Mode
 
 La aplicación funciona sin credenciales de GoHighLevel. El dashboard indica el modo activo y las respuestas simuladas quedan en el registro de actividad. El botón **Ejecutar demo completa** ejecuta y devuelve una timeline con estos pasos:
